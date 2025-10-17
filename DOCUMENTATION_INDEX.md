@@ -105,6 +105,17 @@ This project includes comprehensive documentation for different use cases and sk
 - Performance notes
 - API usage
 
+### [PRIVACY_FEATURES.md](PRIVACY_FEATURES.md)
+**What:** Privacy and people detection guide  
+**For:** Understanding how people are excluded from screenshots  
+**Time:** 5 minutes  
+**Covers:**
+- How people detection works
+- Privacy compliance (GDPR)
+- What frames are selected/excluded
+- Benefits and limitations
+- Technical implementation
+
 ## 📋 Quick Reference
 
 ### By User Type

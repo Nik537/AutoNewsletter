@@ -88,18 +88,31 @@ Video Transcript:
 
 I'm providing you with {len(frame_contents)} frames extracted from the video. Please analyze these frames and identify the 5-8 most visually interesting and relevant frames that would work well as screenshots in a newsletter article.
 
+IMPORTANT RESTRICTION: **DO NOT select any frames that contain people, faces, or human figures.** Only select frames that show:
+- Slides/presentations (without people)
+- Diagrams and charts
+- Text and graphics
+- Objects and products
+- Landscapes and scenery
+- Computer screens showing content
+- Any visual content WITHOUT people
+
+If a frame contains any person (even partially visible), skip it and choose a different frame.
+
 For each selected frame, provide:
 1. The frame number (0-{len(frame_contents)-1})
 2. A brief description of what makes it important
 3. A caption in English
+4. Confirmation that it contains no people
 
 Respond in JSON format:
 {{
   "selected_frames": [
     {{
       "frame_index": 0,
-      "reason": "Shows the main topic introduction",
-      "caption": "Introduction to the topic"
+      "reason": "Shows the main topic introduction slide with no people",
+      "caption": "Introduction to the topic",
+      "contains_people": false
     }}
   ]
 }}"""
@@ -141,8 +154,13 @@ Respond in JSON format:
             result = json.loads(json_str)
             
             # Map selected frames back to original frame data
+            # Filter out any frames that contain people
             selected_frames = []
             for selection in result["selected_frames"]:
+                # Skip if frame explicitly contains people
+                if selection.get("contains_people", False):
+                    continue
+                    
                 frame_idx = selection["frame_index"]
                 if 0 <= frame_idx < len(frame_contents):
                     frame_data = frame_contents[frame_idx]

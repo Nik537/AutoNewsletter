@@ -19,7 +19,7 @@ See [GET_STARTED.md](GET_STARTED.md) for the complete guide.
 - 🔗 YouTube URL support - paste any YouTube link
 - 🎙️ Audio transcription using Whisper
 - 🤖 AI-powered content generation with Claude
-- 🖼️ Intelligent screenshot selection
+- 🖼️ Intelligent screenshot selection (no people/faces for privacy)
 - 🇸🇮 Automatic translation to Slovenian
 - 📝 Markdown output with embedded images
 - 📊 Real-time progress tracking
@@ -178,7 +178,7 @@ Edit `.env` in the backend directory:
 
 - **Multilingual**: Accepts English videos, outputs Slovenian articles
 - **AI-Powered**: Uses Claude Haiku 4.5 for intelligent content generation
-- **Smart Screenshots**: Automatically selects the most relevant frames
+- **Smart Screenshots**: Automatically selects the most relevant frames (excludes people for privacy)
 - **Professional Output**: Well-structured markdown suitable for newsletters
 - **Easy to Use**: Simple drag-and-drop interface
 - **Customizable**: Configurable frame extraction and article length
