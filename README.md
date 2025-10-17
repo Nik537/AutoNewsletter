@@ -22,9 +22,9 @@ See [GET_STARTED.md](GET_STARTED.md) for the complete guide.
 - 🖼️ Intelligent screenshot selection (no people/faces for privacy)
 - 🇸🇮 Automatic translation to Slovenian
 - 🔍 AI Slovenian language teacher - proofreads and corrects the text
-- 📝 Markdown output with embedded images
+- 📝 Multiple export formats: Markdown, HTML, DOCX (Word)
 - 📊 Real-time progress tracking
-- 💾 One-click download as ZIP
+- 💾 One-click download - choose your format
 
 ## Tech Stack
 
