@@ -1,0 +1,17 @@
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
+anthropic==0.25.0
+httpx==0.24.1
+httpcore==0.17.3
+h11==0.14.0
+openai-whisper
+python-dotenv==1.0.1
+Pillow==11.0.0
+aiofiles==24.1.0
+pydantic==2.9.2
+pydantic-settings==2.6.0
+torch
+torchaudio
+yt-dlp>=2024.1.0
+
