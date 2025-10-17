@@ -274,6 +274,43 @@ async def download_newsletter(job_id: str):
     )
 
 
+@app.get("/api/download/{job_id}/{format}")
+async def download_newsletter_format(job_id: str, format: str):
+    """Download newsletter in specific format (markdown, html, docx)"""
+    if job_id not in jobs:
+        raise HTTPException(404, "Job not found")
+    
+    job = jobs[job_id]
+    if job["status"] != "completed":
+        raise HTTPException(400, "Job not completed yet")
+    
+    output_dir = OUTPUT_DIR / job_id
+    if not output_dir.exists():
+        raise HTTPException(404, "Output directory not found")
+    
+    # Map format to file
+    format_map = {
+        "markdown": ("newsletter.md", "text/markdown"),
+        "html": ("newsletter.html", "text/html"),
+        "docx": ("newsletter.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    }
+    
+    if format not in format_map:
+        raise HTTPException(400, f"Invalid format. Supported: {', '.join(format_map.keys())}")
+    
+    filename, media_type = format_map[format]
+    file_path = output_dir / filename
+    
+    if not file_path.exists():
+        raise HTTPException(404, f"{format.upper()} file not found")
+    
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        filename=filename
+    )
+
+
 @app.delete("/api/job/{job_id}")
 async def delete_job(job_id: str):
     """Delete a job and its associated files"""

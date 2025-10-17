@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 from typing import List, Dict
 from app.ai_service import AIService
+from app.export_formatter import ExportFormatter
 
 
 class NewsletterGenerator:
@@ -81,6 +82,10 @@ class NewsletterGenerator:
         markdown_content = "\n".join(markdown_parts)
         newsletter_path = output_dir / "newsletter.md"
         newsletter_path.write_text(markdown_content, encoding="utf-8")
+        
+        # Create additional formats (HTML for Notion, DOCX for Word)
+        formatter = ExportFormatter(output_dir)
+        formatter.create_all_formats(markdown_content, output_dir / "images")
         
         # Clean up temporary frames
         for frame in key_frames:
