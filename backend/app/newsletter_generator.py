@@ -39,6 +39,9 @@ class NewsletterGenerator:
             transcript, key_frames
         )
         
+        # Proofread and improve Slovenian text
+        article_content = await ai_service.proofread_slovenian(article_content)
+        
         # Build markdown
         markdown_parts = []
         

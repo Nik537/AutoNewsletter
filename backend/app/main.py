@@ -94,12 +94,18 @@ async def process_video_task(job_id: str, video_path: Path):
         output_path = OUTPUT_DIR / job_id
         output_path.mkdir(exist_ok=True)
         
+        jobs[job_id]["progress"] = 75
+        jobs[job_id]["message"] = "Generating Slovenian article..."
+        
         newsletter_path = await newsletter_gen.generate(
             transcript=transcript,
             key_frames=key_frames,
             output_dir=output_path,
             ai_service=ai_service
         )
+        
+        jobs[job_id]["progress"] = 95
+        jobs[job_id]["message"] = "Proofreading completed, finalizing..."
         
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"

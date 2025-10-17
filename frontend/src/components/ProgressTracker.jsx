@@ -42,7 +42,8 @@ function ProgressTracker({ jobId, onStatusUpdate, onComplete }) {
     if (status.progress < 30) return { stage: 'Extracting Audio', icon: '🎵' };
     if (status.progress < 50) return { stage: 'Extracting Frames', icon: '🎬' };
     if (status.progress < 70) return { stage: 'Analyzing with AI', icon: '🤖' };
-    if (status.progress < 100) return { stage: 'Generating Newsletter', icon: '📝' };
+    if (status.progress < 85) return { stage: 'Generating Newsletter', icon: '📝' };
+    if (status.progress < 100) return { stage: 'Proofreading Slovenian', icon: '🔍' };
     return { stage: 'Complete', icon: '✅' };
   };
 

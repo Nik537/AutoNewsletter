@@ -21,6 +21,7 @@ See [GET_STARTED.md](GET_STARTED.md) for the complete guide.
 - 🤖 AI-powered content generation with Claude
 - 🖼️ Intelligent screenshot selection (no people/faces for privacy)
 - 🇸🇮 Automatic translation to Slovenian
+- 🔍 AI Slovenian language teacher - proofreads and corrects the text
 - 📝 Markdown output with embedded images
 - 📊 Real-time progress tracking
 - 💾 One-click download as ZIP

@@ -227,4 +227,37 @@ Important: Write ONLY the article content in Slovenian. Do not include any Engli
         )
         
         return response.content[0].text
+    
+    async def proofread_slovenian(self, article_text: str) -> str:
+        """Proofread and improve Slovenian text quality"""
+        
+        prompt = f"""Ti si strokovni učitelj slovenskega jezika in lektor. Tvoja naloga je pregledati in popraviti članek v slovenščini.
+
+ČLANEK ZA PREGLED:
+{article_text}
+
+NAVODILA:
+1. Preglej celoten članek za slovnične napake
+2. Popravi morebitne napake v sklanjanju, spreganju, ločilih
+3. Izboljšaj slog in naravnost slovenskega jezika
+4. Poskrbi, da se besedilo bere tekoče in naravno
+5. Ohrani strukturo in pomen originalnega besedila
+6. Popravi morebitne anglizme v bolj naravno slovenščino
+7. Preveri pravilno uporabo slovenskih znakov (č, š, ž)
+
+POMEMBNO: 
+- Vrni SAMO popravljen članek v slovenščini
+- Ne dodajaj komentarjev, opomb ali razlag
+- Ohrani vse naslove, odstavke in strukturo
+- Ne dodajaj novih vsebin, samo popravi obstoječe
+
+Vrni popravljen članek:"""
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=4500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        return response.content[0].text.strip()
 
