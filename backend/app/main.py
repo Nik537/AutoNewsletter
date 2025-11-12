@@ -15,6 +15,8 @@ from app.video_processor import VideoProcessor
 from app.ai_service import AIService
 from app.newsletter_generator import NewsletterGenerator
 from app.youtube_downloader import YouTubeDownloader
+from app.linkedin_downloader import LinkedInDownloader
+from app.x_downloader import XDownloader
 
 load_dotenv()
 
@@ -56,6 +58,16 @@ class JobStatus(BaseModel):
 
 class YouTubeUpload(BaseModel):
     url: str
+
+
+class LinkedInUpload(BaseModel):
+    url: str
+    auth_token: Optional[str] = None
+
+
+class XUpload(BaseModel):
+    url: str
+    bearer_token: Optional[str] = None
 
 
 async def process_video_task(job_id: str, video_path: Path):
@@ -174,14 +186,14 @@ async def upload_youtube(
     data: YouTubeUpload
 ):
     """Upload a video from YouTube URL and start processing"""
-    
+
     # Validate URL
     if not YouTubeDownloader.validate_url(data.url):
         raise HTTPException(400, "Invalid YouTube URL")
-    
+
     # Generate job ID
     job_id = str(uuid.uuid4())
-    
+
     # Initialize job
     jobs[job_id] = {
         "job_id": job_id,
@@ -190,11 +202,69 @@ async def upload_youtube(
         "message": "Downloading video from YouTube...",
         "url": data.url
     }
-    
+
     # Start background processing with YouTube download
     background_tasks.add_task(process_youtube_task, job_id, data.url)
-    
+
     return {"job_id": job_id, "message": "YouTube video download started"}
+
+
+@app.post("/api/upload-linkedin")
+async def upload_linkedin(
+    background_tasks: BackgroundTasks,
+    data: LinkedInUpload
+):
+    """Upload a post from LinkedIn URL and start processing"""
+
+    # Validate URL
+    if not LinkedInDownloader.validate_url(data.url):
+        raise HTTPException(400, "Invalid LinkedIn URL")
+
+    # Generate job ID
+    job_id = str(uuid.uuid4())
+
+    # Initialize job
+    jobs[job_id] = {
+        "job_id": job_id,
+        "status": "queued",
+        "progress": 0,
+        "message": "Downloading content from LinkedIn...",
+        "url": data.url
+    }
+
+    # Start background processing with LinkedIn download
+    background_tasks.add_task(process_linkedin_task, job_id, data.url, data.auth_token)
+
+    return {"job_id": job_id, "message": "LinkedIn post download started"}
+
+
+@app.post("/api/upload-x")
+async def upload_x(
+    background_tasks: BackgroundTasks,
+    data: XUpload
+):
+    """Upload a post from X (Twitter) URL and start processing"""
+
+    # Validate URL
+    if not XDownloader.validate_url(data.url):
+        raise HTTPException(400, "Invalid X URL")
+
+    # Generate job ID
+    job_id = str(uuid.uuid4())
+
+    # Initialize job
+    jobs[job_id] = {
+        "job_id": job_id,
+        "status": "queued",
+        "progress": 0,
+        "message": "Downloading content from X...",
+        "url": data.url
+    }
+
+    # Start background processing with X download
+    background_tasks.add_task(process_x_task, job_id, data.url, data.bearer_token)
+
+    return {"job_id": job_id, "message": "X post download started"}
 
 
 async def process_youtube_task(job_id: str, youtube_url: str):
@@ -204,22 +274,103 @@ async def process_youtube_task(job_id: str, youtube_url: str):
         jobs[job_id]["status"] = "downloading"
         jobs[job_id]["progress"] = 5
         jobs[job_id]["message"] = "Downloading video from YouTube..."
-        
+
         # Download video
         downloader = YouTubeDownloader(UPLOAD_DIR)
         video_path = downloader.download(youtube_url, job_id)
-        
+
         jobs[job_id]["progress"] = 10
         jobs[job_id]["message"] = "Video downloaded, starting processing..."
-        
+
         # Continue with normal video processing
         await process_video_task(job_id, video_path)
-        
+
     except Exception as e:
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["error"] = str(e)
         jobs[job_id]["message"] = f"Error downloading video: {str(e)}"
         print(f"Error processing YouTube video {job_id}: {e}")
+
+
+async def process_linkedin_task(job_id: str, linkedin_url: str, auth_token: Optional[str] = None):
+    """Background task to download and process LinkedIn post"""
+    try:
+        # Update status
+        jobs[job_id]["status"] = "downloading"
+        jobs[job_id]["progress"] = 5
+        jobs[job_id]["message"] = "Downloading content from LinkedIn..."
+
+        # Download content
+        downloader = LinkedInDownloader(UPLOAD_DIR)
+        post_data = downloader.download(linkedin_url, auth_token)
+
+        # Check if there was an error
+        if 'error' in post_data:
+            raise Exception(post_data['error'])
+
+        # If LinkedIn post has video, process it like YouTube
+        if post_data.get('videos') and len(post_data['videos']) > 0:
+            video_url = post_data['videos'][0]
+            video_path = downloader.download_media(video_url, f"{job_id}_linkedin_video.mp4")
+
+            if video_path:
+                jobs[job_id]["progress"] = 10
+                jobs[job_id]["message"] = "LinkedIn video downloaded, starting processing..."
+                await process_video_task(job_id, video_path)
+            else:
+                raise Exception("Failed to download LinkedIn video")
+        else:
+            # For text-only posts or posts with images, create a placeholder
+            # This is a simplified version - you'd need to implement proper content extraction
+            jobs[job_id]["status"] = "failed"
+            jobs[job_id]["error"] = "LinkedIn text-only posts not yet supported. Please use posts with videos."
+            jobs[job_id]["message"] = "LinkedIn integration requires API access. See documentation."
+
+    except Exception as e:
+        jobs[job_id]["status"] = "failed"
+        jobs[job_id]["error"] = str(e)
+        jobs[job_id]["message"] = f"Error processing LinkedIn post: {str(e)}"
+        print(f"Error processing LinkedIn post {job_id}: {e}")
+
+
+async def process_x_task(job_id: str, x_url: str, bearer_token: Optional[str] = None):
+    """Background task to download and process X (Twitter) post"""
+    try:
+        # Update status
+        jobs[job_id]["status"] = "downloading"
+        jobs[job_id]["progress"] = 5
+        jobs[job_id]["message"] = "Downloading content from X..."
+
+        # Download content
+        downloader = XDownloader(UPLOAD_DIR)
+        tweet_data = downloader.download(x_url, bearer_token)
+
+        # Check if there was an error
+        if 'error' in tweet_data:
+            raise Exception(tweet_data['error'])
+
+        # If X post has video, process it like YouTube
+        if tweet_data.get('videos') and len(tweet_data['videos']) > 0:
+            video_url = tweet_data['videos'][0]
+            video_path = downloader.download_media(video_url, f"{job_id}_x_video.mp4")
+
+            if video_path:
+                jobs[job_id]["progress"] = 10
+                jobs[job_id]["message"] = "X video downloaded, starting processing..."
+                await process_video_task(job_id, video_path)
+            else:
+                raise Exception("Failed to download X video")
+        else:
+            # For text-only posts or posts with images, create a placeholder
+            jobs[job_id]["status"] = "failed"
+            jobs[job_id]["error"] = "X text-only posts not yet supported. Please use posts with videos."
+            jobs[job_id]["message"] = "X integration requires API access. See documentation."
+
+    except Exception as e:
+        jobs[job_id]["status"] = "failed"
+        jobs[job_id]["error"] = str(e)
+        jobs[job_id]["message"] = f"Error processing X post: {str(e)}"
+        print(f"Error processing X post {job_id}: {e}")
 
 
 @app.get("/api/status/{job_id}")
@@ -292,7 +443,9 @@ async def download_newsletter_format(job_id: str, format: str):
     format_map = {
         "markdown": ("newsletter.md", "text/markdown"),
         "html": ("newsletter.html", "text/html"),
-        "docx": ("newsletter.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        "docx": ("newsletter.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        "linkedin": ("linkedin_post.json", "application/json"),
+        "x": ("x_post.json", "application/json")
     }
     
     if format not in format_map:

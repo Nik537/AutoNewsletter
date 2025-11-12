@@ -5,6 +5,9 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import re
+import json
+from anthropic import Anthropic
+import os
 
 
 class ExportFormatter:
@@ -232,19 +235,197 @@ class ExportFormatter:
         
         return docx_path
     
+    def create_linkedin_post(self, markdown_content: str, output_filename: str = "linkedin_post.json") -> Path:
+        """
+        Convert newsletter content to LinkedIn post format.
+        LinkedIn posts have a 3000 character limit for regular posts.
+        For longer content, we'll create a LinkedIn article format.
+        """
+
+        # Initialize Anthropic client
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        # Extract title and clean content
+        lines = markdown_content.split('\n')
+        title = ""
+        content_lines = []
+
+        for line in lines:
+            if line.startswith('# '):
+                title = line[2:].strip()
+            elif not line.startswith('!['):  # Skip image markdown
+                content_lines.append(line)
+
+        full_content = '\n'.join(content_lines)
+
+        # Use Claude to transform the newsletter into a LinkedIn post
+        prompt = f"""Transform this newsletter article into an engaging LinkedIn post.
+
+Article Title: {title}
+Article Content:
+{full_content}
+
+Requirements:
+1. Keep it under 3000 characters (ideally 1300-2000 for better engagement)
+2. Start with a hook that grabs attention
+3. Use short paragraphs (1-2 sentences each) for readability
+4. Include 3-5 relevant hashtags at the end
+5. Use emojis sparingly but effectively (1-3 total)
+6. Maintain a professional but engaging tone
+7. Include a call-to-action at the end
+8. Preserve the key insights from the article
+9. Write in the same language as the article (Slovenian or English)
+
+Format the post ready to copy-paste directly into LinkedIn."""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=2000,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+
+        linkedin_text = response.content[0].text
+
+        # Create LinkedIn post data structure
+        linkedin_post = {
+            "platform": "linkedin",
+            "type": "post",
+            "title": title,
+            "text": linkedin_text,
+            "character_count": len(linkedin_text),
+            "hashtags": self._extract_hashtags(linkedin_text),
+            "original_article_title": title,
+            "metadata": {
+                "format": "text_post",
+                "max_chars": 3000,
+                "recommended_chars": "1300-2000"
+            }
+        }
+
+        # Save as JSON
+        linkedin_path = self.output_dir / output_filename
+        linkedin_path.write_text(json.dumps(linkedin_post, indent=2, ensure_ascii=False), encoding='utf-8')
+
+        return linkedin_path
+
+    def create_x_post(self, markdown_content: str, output_filename: str = "x_post.json") -> Path:
+        """
+        Convert newsletter content to X (Twitter) post format.
+        X posts have a 280 character limit, so we'll create a thread.
+        """
+
+        # Initialize Anthropic client
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        # Extract title and clean content
+        lines = markdown_content.split('\n')
+        title = ""
+        content_lines = []
+
+        for line in lines:
+            if line.startswith('# '):
+                title = line[2:].strip()
+            elif not line.startswith('!['):  # Skip image markdown
+                content_lines.append(line)
+
+        full_content = '\n'.join(content_lines)
+
+        # Use Claude to transform the newsletter into an X thread
+        prompt = f"""Transform this newsletter article into an engaging X (Twitter) thread.
+
+Article Title: {title}
+Article Content:
+{full_content}
+
+Requirements:
+1. Create a thread of 5-10 tweets
+2. Each tweet MUST be under 280 characters
+3. First tweet should be a hook that grabs attention and mentions it's a thread (use 🧵 emoji)
+4. Number each tweet (1/, 2/, 3/, etc.) except the first one
+5. Last tweet should have a call-to-action
+6. Use emojis strategically (1 per tweet maximum)
+7. Include 2-3 relevant hashtags only in the last tweet
+8. Make each tweet self-contained but connected to the thread
+9. Write in the same language as the article (Slovenian or English)
+10. Keep the key insights and make it punchy and engaging
+
+Return ONLY the tweets, one per line, nothing else. Start each tweet on a new line."""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=2000,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+
+        thread_text = response.content[0].text
+
+        # Parse tweets from response
+        tweets = [tweet.strip() for tweet in thread_text.split('\n') if tweet.strip()]
+
+        # Validate character counts and truncate if needed
+        validated_tweets = []
+        for i, tweet in enumerate(tweets):
+            if len(tweet) > 280:
+                # Try to truncate at word boundary
+                truncated = tweet[:277] + "..."
+                validated_tweets.append(truncated)
+            else:
+                validated_tweets.append(tweet)
+
+        # Create X thread data structure
+        x_thread = {
+            "platform": "x",
+            "type": "thread",
+            "title": title,
+            "tweets": validated_tweets,
+            "tweet_count": len(validated_tweets),
+            "total_characters": sum(len(t) for t in validated_tweets),
+            "hashtags": self._extract_hashtags(' '.join(validated_tweets)),
+            "original_article_title": title,
+            "metadata": {
+                "format": "thread",
+                "max_chars_per_tweet": 280,
+                "recommended_thread_length": "5-10 tweets"
+            }
+        }
+
+        # Save as JSON
+        x_path = self.output_dir / output_filename
+        x_path.write_text(json.dumps(x_thread, indent=2, ensure_ascii=False), encoding='utf-8')
+
+        return x_path
+
+    def _extract_hashtags(self, text: str) -> List[str]:
+        """Extract hashtags from text"""
+        hashtag_pattern = r'#\w+'
+        hashtags = re.findall(hashtag_pattern, text)
+        return hashtags
+
     def create_all_formats(self, markdown_content: str, images_dir: Path) -> Dict[str, Path]:
         """Create all export formats"""
-        
+
         formats = {}
-        
+
         # Markdown (already exists)
         formats['markdown'] = self.output_dir / "newsletter.md"
-        
+
         # HTML for Notion and web
         formats['html'] = self.create_html(markdown_content, "newsletter.html")
-        
+
         # DOCX for Word
         formats['docx'] = self.create_docx(markdown_content, images_dir, "newsletter.docx")
-        
+
+        # LinkedIn post
+        formats['linkedin'] = self.create_linkedin_post(markdown_content, "linkedin_post.json")
+
+        # X (Twitter) thread
+        formats['x'] = self.create_x_post(markdown_content, "x_post.json")
+
         return formats
 
