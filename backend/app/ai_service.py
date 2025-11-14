@@ -230,7 +230,7 @@ Important: Write ONLY the article content in Slovenian. Do not include any Engli
     
     async def proofread_slovenian(self, article_text: str) -> str:
         """Proofread and improve Slovenian text quality"""
-        
+
         prompt = f"""Ti si strokovni učitelj slovenskega jezika in lektor. Tvoja naloga je pregledati in popraviti članek v slovenščini.
 
 ČLANEK ZA PREGLED:
@@ -245,7 +245,7 @@ NAVODILA:
 6. Popravi morebitne anglizme v bolj naravno slovenščino
 7. Preveri pravilno uporabo slovenskih znakov (č, š, ž)
 
-POMEMBNO: 
+POMEMBNO:
 - Vrni SAMO popravljen članek v slovenščini
 - Ne dodajaj komentarjev, opomb ali razlag
 - Ohrani vse naslove, odstavke in strukturo
@@ -258,6 +258,51 @@ Vrni popravljen članek:"""
             max_tokens=4500,
             messages=[{"role": "user", "content": prompt}]
         )
-        
+
         return response.content[0].text.strip()
+
+    async def generate_linkedin_post(
+        self,
+        transcript: str,
+        key_frames: List[Dict]
+    ) -> str:
+        """Generate a LinkedIn post in Slovenian based on transcript and key frames"""
+
+        # Prepare frame descriptions
+        frame_descriptions = "\n".join([
+            f"- Frame at {f['timestamp']}s: {f['caption']} ({f['reason']})"
+            for f in key_frames
+        ])
+
+        prompt = f"""You are a professional social media content creator. Create an engaging LinkedIn post in Slovenian language based on the following English video content.
+
+Video Transcript (English):
+{transcript}
+
+Key Visual Moments:
+{frame_descriptions}
+
+Instructions:
+1. Write the post entirely in Slovenian language
+2. The post should be 150-300 words - concise and engaging for LinkedIn
+3. Start with a compelling hook or question
+4. Include 3-5 key takeaways or insights from the video
+5. Use line breaks and emojis strategically for readability
+6. End with a call-to-action or thought-provoking question
+7. The tone should be professional yet conversational
+8. Make it shareable and engaging for a professional audience
+9. Include 3-5 relevant hashtags in Slovenian at the end
+
+Important: Write ONLY the LinkedIn post content in Slovenian. Do not include any English text, explanations, or meta-commentary."""
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        linkedin_post = response.content[0].text.strip()
+
+        # Proofread the LinkedIn post
+        return await self.proofread_slovenian(linkedin_post)
 

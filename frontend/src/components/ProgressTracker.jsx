@@ -38,16 +38,34 @@ function ProgressTracker({ jobId, onStatusUpdate, onComplete }) {
   }, [jobId, onStatusUpdate, onComplete]);
 
   const getStageInfo = () => {
-    if (status.progress < 20) return { stage: 'Uploading', icon: '📤' };
-    if (status.progress < 30) return { stage: 'Extracting Audio', icon: '🎵' };
-    if (status.progress < 50) return { stage: 'Extracting Frames', icon: '🎬' };
-    if (status.progress < 70) return { stage: 'Analyzing with AI', icon: '🤖' };
-    if (status.progress < 85) return { stage: 'Generating Newsletter', icon: '📝' };
-    if (status.progress < 100) return { stage: 'Proofreading Slovenian', icon: '🔍' };
-    return { stage: 'Complete', icon: '✅' };
+    if (status.progress < 10) return { stage: 'Downloading Video', icon: '📥', step: 1 };
+    if (status.progress < 20) return { stage: 'Extracting Audio', icon: '🎵', step: 2 };
+    if (status.progress < 30) return { stage: 'Extracting Frames', icon: '🎬', step: 3 };
+    if (status.progress < 50) return { stage: 'Transcribing Audio', icon: '🎤', step: 4 };
+    if (status.progress < 70) return { stage: 'Analyzing with AI', icon: '🤖', step: 5 };
+    if (status.progress < 80) return { stage: 'Generating Content', icon: '📝', step: 6 };
+    if (status.progress < 100) return { stage: 'Final Touches', icon: '✨', step: 7 };
+    return { stage: 'Complete', icon: '✅', step: 8 };
   };
 
   const stageInfo = getStageInfo();
+
+  const allStages = [
+    { name: 'Download', icon: '📥', minProgress: 0 },
+    { name: 'Extract Audio', icon: '🎵', minProgress: 10 },
+    { name: 'Extract Frames', icon: '🎬', minProgress: 20 },
+    { name: 'Transcribe', icon: '🎤', minProgress: 30 },
+    { name: 'AI Analysis', icon: '🤖', minProgress: 50 },
+    { name: 'Generate', icon: '📝', minProgress: 70 },
+    { name: 'Finalize', icon: '✨', minProgress: 80 },
+    { name: 'Complete', icon: '✅', minProgress: 100 }
+  ];
+
+  const getCurrentStageIndex = () => {
+    return allStages.findIndex(s => status.progress < s.minProgress) - 1;
+  };
+
+  const currentStageIndex = getCurrentStageIndex();
 
   return (
     <div className="progress-container">
@@ -57,12 +75,32 @@ function ProgressTracker({ jobId, onStatusUpdate, onComplete }) {
         <p className="status-message">{status.message}</p>
 
         <div className="progress-bar-container">
-          <div 
+          <div
             className="progress-bar"
             style={{ width: `${status.progress}%` }}
           >
             <span className="progress-text">{status.progress}%</span>
           </div>
+        </div>
+
+        {/* Step by step indicator */}
+        <div className="steps-container">
+          {allStages.map((stage, index) => {
+            const isCompleted = status.progress >= stage.minProgress;
+            const isCurrent = index === currentStageIndex;
+
+            return (
+              <div
+                key={index}
+                className={`step-item ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}`}
+              >
+                <div className="step-icon">{stage.icon}</div>
+                <div className="step-name">{stage.name}</div>
+                {isCompleted && !isCurrent && <div className="step-check">✓</div>}
+                {isCurrent && <div className="step-spinner"></div>}
+              </div>
+            );
+          })}
         </div>
 
         <div className="progress-details">

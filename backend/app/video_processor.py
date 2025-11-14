@@ -96,12 +96,15 @@ class VideoProcessor:
         """Synchronous transcription using Whisper"""
         # Use base model for balance of speed and accuracy
         # Options: tiny, base, small, medium, large
+        print("Loading Whisper model (this may take a while on first run)...")
         model = whisper.load_model("base")
-        
+        print("Whisper model loaded, starting transcription...")
+
         result = model.transcribe(
             str(audio_path),
             language="en"
         )
-        
+        print("Transcription complete!")
+
         return result["text"].strip()
 

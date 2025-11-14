@@ -95,22 +95,23 @@ async def process_video_task(job_id: str, video_path: Path):
         output_path.mkdir(exist_ok=True)
         
         jobs[job_id]["progress"] = 75
-        jobs[job_id]["message"] = "Generating Slovenian article..."
-        
-        newsletter_path = await newsletter_gen.generate(
+        jobs[job_id]["message"] = "Generating Slovenian article and LinkedIn post..."
+
+        result_paths = await newsletter_gen.generate(
             transcript=transcript,
             key_frames=key_frames,
             output_dir=output_path,
             ai_service=ai_service
         )
-        
+
         jobs[job_id]["progress"] = 95
         jobs[job_id]["message"] = "Proofreading completed, finalizing..."
-        
+
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"
-        jobs[job_id]["message"] = "Newsletter generated successfully!"
-        jobs[job_id]["result_path"] = str(newsletter_path)
+        jobs[job_id]["message"] = "Newsletter and LinkedIn post generated successfully!"
+        jobs[job_id]["result_path"] = str(result_paths["newsletter"])
+        jobs[job_id]["linkedin_path"] = str(result_paths["linkedin"])
         
         # Cleanup uploaded video
         video_path.unlink(missing_ok=True)
@@ -233,20 +234,29 @@ async def get_status(job_id: str):
 
 @app.get("/api/preview/{job_id}")
 async def preview_newsletter(job_id: str):
-    """Get the markdown content for preview"""
+    """Get the markdown content and LinkedIn post for preview"""
     if job_id not in jobs:
         raise HTTPException(404, "Job not found")
-    
+
     job = jobs[job_id]
     if job["status"] != "completed":
         raise HTTPException(400, "Job not completed yet")
-    
+
     result_path = Path(job["result_path"])
     if not result_path.exists():
         raise HTTPException(404, "Newsletter file not found")
-    
+
+    linkedin_path = Path(job.get("linkedin_path", ""))
+    linkedin_content = ""
+    if linkedin_path.exists():
+        linkedin_content = linkedin_path.read_text(encoding="utf-8")
+
     content = result_path.read_text(encoding="utf-8")
-    return {"content": content, "job_id": job_id}
+    return {
+        "content": content,
+        "linkedin_post": linkedin_content,
+        "job_id": job_id
+    }
 
 
 @app.get("/api/download/{job_id}")

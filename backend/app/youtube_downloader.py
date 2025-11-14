@@ -14,16 +14,16 @@ class YouTubeDownloader:
     def download(self, url: str, job_id: str) -> Path:
         """
         Download video from YouTube URL
-        
+
         Args:
             url: YouTube video URL
             job_id: Unique job identifier for filename
-            
+
         Returns:
             Path to downloaded video file
         """
         output_template = str(self.output_dir / f"{job_id}_%(title)s.%(ext)s")
-        
+
         ydl_opts = {
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'outtmpl': output_template,
@@ -32,6 +32,28 @@ class YouTubeDownloader:
             'extract_flat': False,
             'ignoreerrors': False,
             'merge_output_format': 'mp4',
+            # Add headers to bypass 403 errors
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+                'Sec-Fetch-Mode': 'navigate',
+            },
+            # Use alternative player clients to avoid 403 errors - prioritize android_creator
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android_creator', 'android', 'ios', 'web'],
+                    'player_skip': ['webpage', 'configs'],
+                    'skip': ['hls', 'dash'],
+                }
+            },
+            # Add retry options
+            'retries': 10,
+            'fragment_retries': 10,
+            # Add geo bypass
+            'geo_bypass': True,
+            # Force IPv4 to avoid IPv6 issues
+            'source_address': '0.0.0.0',
         }
         
         try:

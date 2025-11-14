@@ -5,6 +5,11 @@ import './NewsletterPreview.css';
 
 function NewsletterPreview({ jobId, content, onReset }) {
   const [downloading, setDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useState('newsletter');
+
+  // Parse the content to extract newsletter and LinkedIn post
+  const newsletterContent = content.content || content;
+  const linkedinPost = content.linkedin_post || '';
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -51,12 +56,36 @@ function NewsletterPreview({ jobId, content, onReset }) {
     }
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+    });
+  };
+
   return (
     <div className="preview-container">
       <div className="preview-header">
-        <h2>✅ Newsletter Generated!</h2>
+        <h2>✅ Content Generated!</h2>
+
+        <div className="tab-selector">
+          <button
+            className={`tab-button ${activeTab === 'newsletter' ? 'active' : ''}`}
+            onClick={() => setActiveTab('newsletter')}
+          >
+            📰 Newsletter
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'linkedin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('linkedin')}
+          >
+            💼 LinkedIn Post
+          </button>
+        </div>
+
         <div className="action-buttons">
-          <button 
+          <button
             className="download-button primary"
             onClick={handleDownload}
             disabled={downloading}
@@ -65,19 +94,19 @@ function NewsletterPreview({ jobId, content, onReset }) {
           </button>
         </div>
         <div className="format-buttons">
-          <button 
+          <button
             className="format-button"
             onClick={() => handleDownloadFormat('docx')}
           >
             📄 Word (DOCX)
           </button>
-          <button 
+          <button
             className="format-button"
             onClick={() => handleDownloadFormat('html')}
           >
             🌐 HTML (Notion)
           </button>
-          <button 
+          <button
             className="format-button"
             onClick={() => handleDownloadFormat('markdown')}
           >
@@ -85,7 +114,7 @@ function NewsletterPreview({ jobId, content, onReset }) {
           </button>
         </div>
         <div className="action-buttons">
-          <button 
+          <button
             className="new-button"
             onClick={onReset}
           >
@@ -94,21 +123,40 @@ function NewsletterPreview({ jobId, content, onReset }) {
         </div>
       </div>
 
-      <div className="preview-content">
-        <ReactMarkdown
-          components={{
-            img: ({node, ...props}) => (
-              <img 
-                {...props} 
-                alt={props.alt || 'Newsletter image'}
-                src={`http://localhost:8000/output/${jobId}/${props.src}`}
-              />
-            )
-          }}
-        >
-          {content}
-        </ReactMarkdown>
-      </div>
+      {activeTab === 'newsletter' ? (
+        <div className="preview-content">
+          <ReactMarkdown
+            components={{
+              img: ({node, ...props}) => (
+                <img
+                  {...props}
+                  alt={props.alt || 'Newsletter image'}
+                  src={`http://localhost:8000/output/${jobId}/${props.src}`}
+                />
+              )
+            }}
+          >
+            {newsletterContent}
+          </ReactMarkdown>
+        </div>
+      ) : (
+        <div className="preview-content linkedin-content">
+          <div className="linkedin-header">
+            <h3>LinkedIn Post (Slovenian)</h3>
+            <button
+              className="copy-button"
+              onClick={() => copyToClipboard(linkedinPost)}
+            >
+              📋 Copy to Clipboard
+            </button>
+          </div>
+          <div className="linkedin-post">
+            {linkedinPost.split('\n').map((line, idx) => (
+              <p key={idx}>{line}</p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,13 +14,13 @@ class NewsletterGenerator:
         key_frames: List[Dict],
         output_dir: Path,
         ai_service: AIService
-    ) -> Path:
-        """Generate newsletter markdown file with images"""
-        
+    ) -> Dict[str, Path]:
+        """Generate newsletter markdown file with images and LinkedIn post"""
+
         # Create images directory
         images_dir = output_dir / "images"
         images_dir.mkdir(exist_ok=True)
-        
+
         # Copy images to output directory
         frame_references = []
         for i, frame in enumerate(key_frames):
@@ -28,40 +28,45 @@ class NewsletterGenerator:
             image_name = f"frame_{i+1}.jpg"
             image_dest = images_dir / image_name
             shutil.copy(frame["path"], image_dest)
-            
+
             frame_references.append({
                 "path": f"images/{image_name}",
                 "caption": frame["caption"],
                 "timestamp": frame["timestamp"]
             })
-        
+
         # Generate article content using AI
         article_content = await ai_service.generate_newsletter_content(
             transcript, key_frames
         )
-        
+
         # Proofread and improve Slovenian text
         article_content = await ai_service.proofread_slovenian(article_content)
-        
+
+        # Generate LinkedIn post
+        linkedin_post = await ai_service.generate_linkedin_post(
+            transcript, key_frames
+        )
+
         # Build markdown
         markdown_parts = []
-        
+
         # Split article into sections and insert images
         # Simple approach: split by paragraphs and insert images evenly
         paragraphs = [p.strip() for p in article_content.split("\n\n") if p.strip()]
-        
+
         # Calculate positions to insert images
         images_to_insert = len(frame_references)
         if len(paragraphs) > images_to_insert:
             insert_interval = len(paragraphs) // (images_to_insert + 1)
         else:
             insert_interval = 1
-        
+
         image_idx = 0
         for para_idx, paragraph in enumerate(paragraphs):
             markdown_parts.append(paragraph)
             markdown_parts.append("")  # Empty line
-            
+
             # Insert image after certain intervals
             if (para_idx + 1) % insert_interval == 0 and image_idx < len(frame_references):
                 frame_ref = frame_references[image_idx]
@@ -69,7 +74,7 @@ class NewsletterGenerator:
                 markdown_parts.append(f"*{frame_ref['caption']}*")
                 markdown_parts.append("")
                 image_idx += 1
-        
+
         # Add any remaining images at the end
         while image_idx < len(frame_references):
             frame_ref = frame_references[image_idx]
@@ -77,16 +82,20 @@ class NewsletterGenerator:
             markdown_parts.append(f"*{frame_ref['caption']}*")
             markdown_parts.append("")
             image_idx += 1
-        
+
         # Write markdown file
         markdown_content = "\n".join(markdown_parts)
         newsletter_path = output_dir / "newsletter.md"
         newsletter_path.write_text(markdown_content, encoding="utf-8")
-        
+
+        # Write LinkedIn post file
+        linkedin_path = output_dir / "linkedin_post.txt"
+        linkedin_path.write_text(linkedin_post, encoding="utf-8")
+
         # Create additional formats (HTML for Notion, DOCX for Word)
         formatter = ExportFormatter(output_dir)
         formatter.create_all_formats(markdown_content, output_dir / "images")
-        
+
         # Clean up temporary frames
         for frame in key_frames:
             frame_path = Path(frame["path"])
@@ -94,6 +103,9 @@ class NewsletterGenerator:
                 # Clean up the entire frames directory
                 shutil.rmtree(frame_path.parent, ignore_errors=True)
                 break
-        
-        return newsletter_path
+
+        return {
+            "newsletter": newsletter_path,
+            "linkedin": linkedin_path
+        }
 
